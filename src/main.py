@@ -2,9 +2,8 @@ import plotly.graph_objects as go
 import numpy as np
 from PIL import Image
 import math
-
 from dash import Dash, dcc, html
-
+from testing import arc_coords
 
 colorscale =[
     [0.0, 'rgb(30, 59, 117)'],
@@ -69,6 +68,22 @@ if __name__ == '__main__':
 
     fig.add_trace(
         go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='#FF0000', size = 3))
+    )
+    
+    start = [x[0], y[0], z[0]]
+    end = [x[1], y[1], z[1]]
+    arc_x, arc_y, arc_z = arc_coords(start, end, radius=radius)
+
+    fig.add_trace(
+        go.Scatter3d(x=arc_x, y=arc_y, z=arc_z, mode='lines')
+    )
+
+    start = [x[1], y[1], z[1]]
+    end = [x[2], y[2], z[2]]
+    arc_x, arc_y, arc_z = arc_coords(start, end, radius=radius)
+
+    fig.add_trace(
+        go.Scatter3d(x=arc_x, y=arc_y, z=arc_z, mode='lines')
     )
 
     app = Dash()
