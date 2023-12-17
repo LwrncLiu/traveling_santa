@@ -3,7 +3,8 @@ import numpy as np
 from PIL import Image
 import math
 from dash import Dash, dcc, html
-from testing import arc_coords
+from testing import arc_coords, long_lat_to_coords, parse_point
+import pandas as pd
 
 colorscale =[
     [0.0, 'rgb(30, 59, 117)'],
@@ -49,47 +50,54 @@ if __name__ == '__main__':
     layout = go.Layout(scene=dict(aspectratio=dict(x=1, y=1, z=1)))
     fig = go.Figure(data=[surf], layout=layout)
 
-    # NYC long, lat
-    coords = [
-        [-73.935242, 40.730610], # NYC 
-        [-0.118092, 51.509865], # London
-        [139.839478, 35.652832] # Tokyo
+    path = [
+        "POINT(0 90)",
+        "POINT(-87.8684039 42.8821595)",
+        "POINT(-73.9869641 40.9390043)",
+        "POINT(-73.7826309 41.0598463)",
+        "POINT(-78.8431931 33.7269719)",
+        "POINT(-88.1137198 30.7283717)",
+        "POINT(-90.9264951 30.5447972)",
+        "POINT(-95.5720002 29.770199)",
+        "POINT(-105.0953399 40.4085544)",
+        "POINT(-111.996804 33.6055745)",
+        "POINT(-115.8093979 33.4883332)",
+        "POINT(0 90)"
     ]
-    x, y, z = [], [], []
-    radius *= 1.01
-    for coord in coords:
-        long = coord[0]
-        lat = coord[1]
-        phi   = (90-lat)*(math.pi/180)
-        theta = (long+180)*(math.pi/180)
-        x.append((radius) * math.sin(phi)*math.cos(theta))
-        y.append((radius) * math.sin(phi)*math.sin(theta))
-        z.append((radius) * math.cos(phi))
 
+
+    x_scatter, y_scatter, z_scatter = [], [], []
+    x_arcs, y_arcs, z_arcs = [], [], []
+    prev_x, prev_y, prev_z = None, None, None
+    radius *= 1.005
+    for i in range(len(path)):
+        long, lat = parse_point(path[i])
+
+        curr_x, curr_y, curr_z = long_lat_to_coords(long, lat, radius)
+        x_scatter.append(curr_x)
+        y_scatter.append(curr_y)
+        z_scatter.append(curr_z)
+        if prev_x is not None:
+            arc_x, arc_y, arc_z = arc_coords([prev_x, prev_y, prev_z], [curr_x, curr_y, curr_z], radius)
+            x_arcs += arc_x
+            y_arcs += arc_y
+            z_arcs += arc_z
+            
+        prev_x, prev_y, prev_z = curr_x, curr_y, curr_z
+
+    # add location scatter points to globe
     fig.add_trace(
-        go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='#FF0000', size = 3))
+        go.Scatter3d(x=x_scatter, y=y_scatter, z=z_scatter, mode='markers', marker=dict(color='#F51720', size = 2))
     )
-    
-    start = [x[0], y[0], z[0]]
-    end = [x[1], y[1], z[1]]
-    arc_x, arc_y, arc_z = arc_coords(start, end, radius=radius)
 
     fig.add_trace(
-        go.Scatter3d(x=arc_x, y=arc_y, z=arc_z, mode='lines')
-    )
-
-    start = [x[1], y[1], z[1]]
-    end = [x[2], y[2], z[2]]
-    arc_x, arc_y, arc_z = arc_coords(start, end, radius=radius)
-
-    fig.add_trace(
-        go.Scatter3d(x=arc_x, y=arc_y, z=arc_z, mode='lines')
+        go.Scatter3d(x=x_arcs, y=y_arcs, z=z_arcs, mode='lines', marker=dict(color='#00FFFF'))
     )
 
     app = Dash()
     app.layout = html.Div(
-        [dcc.Graph(figure=fig, style={'width': '90vh', 'height': '90vh'})],
-        style={'width': '80%', 'height': '90vh'}
+        [dcc.Graph(figure=fig, style={'width': '100vh', 'height': '100vh'})],
+        style={'width': '100%', 'height': '100vh'}
     )
 
     app.run(
