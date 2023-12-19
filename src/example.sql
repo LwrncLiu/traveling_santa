@@ -22,6 +22,50 @@ create or replace function points_equal(point1 GEOGRAPHY, point2 GEOGRAPHY)
     $$
 ;
 
+
+CREATE OR REPLACE FUNCTION ROUTES.TBL_EXIST(TBL VARCHAR)
+  RETURNS BOOLEAN
+  LANGUAGE SQL
+AS
+$$
+select to_boolean(count(1)) 
+from information_schema.tables 
+where table_schema = 'ROUTES' 
+and table_name = UPPER(tbl)
+$$
+;
+select ROUTES.TBL_EXIST('test')
+
+-- create proc to find a path by using nearest neighbors
+create or replace procedure routes.get_n_random_locs(num_locs INT, table_name STRING)
+    returns string 
+    language python 
+    runtime_version = '3.10'
+    packages = ('snowflake-snowpark-python')
+    handler = 'main'
+as 
+$$
+import snowflake.snowpark.functions as F
+
+def main(session, num_locs, table_name):
+    all_addresses = session.table('worldwide_address_data.address.openaddress')
+    num_addresses = all_addresses.sample(n=num_locs).to_pandas()
+
+    longitudes = num_addresses['LON'].to_numpy()
+    latitudes = num_addresses['LAT'].to_numpy()
+    points = [f'POINT({lon} {lat})' for lon, lat in zip(longitudes, latitudes)]
+    points.append('POINT(0 90)')
+    points_df = session.create_dataframe(points, schema=['COORDS'])
+    coords_df = points_df.with_column('COORDS', F.call_builtin('TRY_TO_GEOGRAPHY', F.col('COORDS'))).dropna(how='all')
+    
+    coords_df.write.mode("overwrite").save_as_table(f'routes.{table_name}')
+    return 'SUCCESS'
+$$;
+
+select * from routes.random_19_locs_route;
+
+
+drop table routes.random_7_locs;
 -- create proc to find a path by using nearest neighbors
 create or replace procedure naive_path_finder(source_table STRING)
     returns string 
@@ -45,32 +89,49 @@ def main(session, source_table):
     a = coordinates.rename(F.col(COORDS_COL), START_COL)
     b = coordinates.rename(F.col(COORDS_COL), END_COL)
     joined = a.join(b, F.call_builtin('POINTS_EQUAL', F.col(START_COL), F.col(END_COL)) != True)
-    available_routes = joined \
+    all_routes = joined \
         .with_column(DISTANCE_COL, F.call_builtin('ST_DISTANCE', F.col(START_COL), F.col(END_COL))/1000) \
         .withColumn(WKT_FMT_COL, F.call_builtin('ST_ASWKT', F.col(END_COL)))
     
+    available_routes = all_routes
     path = []
     total_distance = 0
     north_pole = f'POINT({0} {90})'
     curr_point = north_pole
     path.append(curr_point)
-    for _ in range(num_coords):
-        next_destination = available_routes.filter(F.call_builtin('POINTS_EQUAL', F.col(START_COL), F.call_builtin('TO_GEOGRAPHY', curr_point))) \
-            .orderBy(F.col(DISTANCE_COL)).limit(1) \
-            .collect()
-        
+    for i in range(num_coords):
+        if i == num_coords - 1:
+            next_destination = all_routes.filter(F.call_builtin('POINTS_EQUAL', F.col(START_COL), F.call_builtin('TO_GEOGRAPHY', curr_point))) \
+                .filter(F.call_builtin('POINTS_EQUAL', F.col(END_COL), F.call_builtin('TO_GEOGRAPHY', north_pole))) \
+                .orderBy(F.col(DISTANCE_COL)).limit(1) \
+                .collect()
+        else:
+            next_destination = available_routes.filter(F.call_builtin('POINTS_EQUAL', F.col(START_COL), F.call_builtin('TO_GEOGRAPHY', curr_point))) \
+                .orderBy(F.col(DISTANCE_COL)).limit(1) \
+                .collect()
         next_point = next_destination[0][WKT_FMT_COL]
         path.append(next_point)
         total_distance += next_destination[0][DISTANCE_COL]
-        curr_point = next_point
         
         available_routes = available_routes.filter(F.call_builtin('POINTS_EQUAL', F.col(END_COL), F.call_builtin('TO_GEOGRAPHY', curr_point)) == False)
+        curr_point = next_point
     nearest_neighbor_path = session.create_dataframe([[path, total_distance, 'naive']], schema=["PATH", "DISTANCE", "METHOD"])
-    nearest_neighbor_path.write.mode("append").save_as_table("route")
+    
+    # check if table already exists
+    output_table_name = f'{source_table}_route'
+    exists = session.sql(f"select routes.tbl_exist('{output_table_name}')").to_pandas()
+    if exists.loc[0].iloc[0]:
+        existing_table = session.table(output_table_name)
+        removed_naive = existing_table.filter(F.col("METHOD") != 'naive')
+        removed_naive.write.mode("overwrite").save_as_table(f'routes.{output_table_name}')
+
+    nearest_neighbor_path.write.mode("append").save_as_table(f'routes.{output_table_name}')
     return 'SUCCESS'
 $$
 ;
 
+call routes.naive_path_finder('random_8_locs');
+select * from routes.random_8_locs_route;
 
 create or replace procedure genetics_path_finder(source_table STRING, population_size INT, generations INT, mutation_rate FLOAT)
     returns string 
@@ -247,11 +308,32 @@ def main(session, source_table, population_size, generations, mutation_rate):
     algorithm.execute()
     best_path = algorithm.best_path
     genetics_best_path = session.create_dataframe([[best_path.path, float(best_path.fitness), 'genetics']], schema=["PATH", "DISTANCE", "METHOD"])
-    genetics_best_path.write.mode("append").save_as_table("route")
+    
+    # check if table already exists
+    output_table_name = f'{source_table}_route'
+    exists = session.sql(f"select routes.tbl_exist('{output_table_name}')").to_pandas()
+    if exists.loc[0].iloc[0]:
+        existing_table = session.table(output_table_name)
+        removed_genetics = existing_table.filter(F.col("METHOD") != 'genetics')
+        removed_genetics.write.mode("overwrite").save_as_table(f'routes.{output_table_name}')
+    
+    genetics_best_path.write.mode("append").save_as_table(f'routes.{output_table_name}')
     return 'SUCCESS'
 $$
 ;
 call naive_path_finder('test_points');
-call genetics_path_finder('test_points', 100, 5, 0.05);
-select * from route;
-select * from test_points;
+call genetics_path_finder('random_4_locs', 20, 5, 0.05);
+
+select * from routes.random_6_locs_route
+
+select * from routes.random_4_locs_route;
+select * from routes.route;
+select * from routes.test_points;
+select country, count(*) from worldwide_address_data.address.openaddress group by country order by 2 desc;
+
+create schema streamlit_app;
+grant usage on database project_santa to role public;
+grant usage on schema streamlit_app to role public;
+grant create streamlit on schema streamlit_app to role public;
+
+select * from routes.random_8_locs_route
