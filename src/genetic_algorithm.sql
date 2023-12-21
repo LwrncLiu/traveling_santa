@@ -177,20 +177,20 @@ def main(session, source_table, population_size, generations, mutation_rate):
         .with_column(COORDS_COL, F.call_builtin('ST_ASWKT', F.col(COORDS_COL))) \
         .to_pandas()
 
-    algorithm = GeneticsAlgorithm(nodes, nested_lookup, population_size, generations, mutation_rate, north_pole)
+    algorithm = GeneticAlgorithm(nodes, nested_lookup, population_size, generations, mutation_rate, north_pole)
     algorithm.execute()
     best_path = algorithm.best_path
-    genetics_best_path = session.create_dataframe([[best_path.path, float(best_path.fitness), 'genetics']], schema=["PATH", "DISTANCE", "METHOD"])
+    genetic_best_path = session.create_dataframe([[best_path.path, float(best_path.fitness), 'genetic']], schema=["PATH", "DISTANCE", "METHOD"])
     
     # check if table already exists
     output_table_name = f'{source_table}_route'
     exists = session.sql(f"select routes.tbl_exist('{output_table_name}')").to_pandas()
     if exists.loc[0].iloc[0]:
         existing_table = session.table(output_table_name)
-        removed_genetics = existing_table.filter(F.col("METHOD") != 'genetics')
-        removed_genetics.write.mode("overwrite").save_as_table(f'routes.{output_table_name}')
+        removed_genetic = existing_table.filter(F.col("METHOD") != 'genetic')
+        removed_genetic.write.mode("overwrite").save_as_table(f'routes.{output_table_name}')
     
-    genetics_best_path.write.mode("append").save_as_table(f'routes.{output_table_name}')
+    genetic_best_path.write.mode("append").save_as_table(f'routes.{output_table_name}')
     return 'SUCCESS'
 $$
 ;
