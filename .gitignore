@@ -1,2 +1,2 @@
-src/streamlit/.streamlit
+src/streamlit/.streamlit/secrets.toml
 santa_env/
