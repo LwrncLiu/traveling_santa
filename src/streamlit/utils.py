@@ -25,9 +25,9 @@ def get_naive_globe(naive_path):
     return globe
 
 @st.cache_data
-def get_genetics_globe(genetics_path):
+def get_genetic_globe(genetic_path):
     globe = globe_fig()
-    node, path = node_paths(genetics_path)
+    node, path = node_paths(genetic_path)
     globe.add_traces([node, path])
     globe.update_layout(
         height=600,

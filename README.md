@@ -1,6 +1,6 @@
 # traveling_santa
 
-This repo implements the genetics algorithm in Snowflake using Snowpark Python and stored procedures to solve to Traveling Salesman Problem.
+This repo implements the genetic algorithm in Snowflake using Snowpark Python and stored procedures to solve to Traveling Salesman Problem.
 
 TODOs:
 ---

@@ -1,4 +1,4 @@
-create or replace procedure genetics_path_finder(source_table STRING, population_size INT, generations INT, mutation_rate FLOAT)
+create or replace procedure genetic_path_finder(source_table STRING, population_size INT, generations INT, mutation_rate FLOAT)
     returns string 
     language python 
     runtime_version = '3.10'
@@ -42,7 +42,7 @@ class Path:
             prev_node = curr_node
         return fitness
 
-class GeneticsAlgorithm:
+class GeneticAlgorithm:
     def __init__(self, locations, lookup_table, population_size, generations, mutation_rate, start_end):
         self.lookup_table = lookup_table
         self.locations = locations
@@ -51,7 +51,7 @@ class GeneticsAlgorithm:
         self.population_size = population_size
         self.north_pole = start_end
 
-        self.METHOD = 'GENETICS'
+        self.METHOD = 'GENETIC'
         self.START_COL = 'START'
         self.END_COL = 'END'
         self.COORDS_COL = 'COORDS'
