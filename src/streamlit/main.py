@@ -29,7 +29,7 @@ with st.sidebar:
 
         st.write('For genetics algorithm: ')
         population_size = st.slider('Population size', num_locs, 300, 150)
-        generations = st.slider('Generations', 1, 100, 50)
+        generations = st.slider('Generations', 1, 1000, 50)
         mutation_rate = st.slider('Mutation Rate', 0.0, 1.0, 0.05)
 
         st.form_submit_button("Submit")
