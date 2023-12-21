@@ -5,7 +5,9 @@ from utils import get_naive_globe, get_genetics_globe
 st.set_page_config(layout='wide')
 
 conn = st.connection("snowflake")
-df = conn.query("select * from routes.route")
+session = conn.session()
+
+st.title('Christmas Eve Flight Path')
 
 col1, col2 = st.columns(2)
 
@@ -16,14 +18,22 @@ data_ready = False
 naive_solution = None 
 genetics_solution = None
 
+@st.cache_data
+def load_data(table_name):
+    df = session.table(f"routes.{table_name}_route").to_pandas()
+    return df
+
 with st.sidebar:
-    num_locs = st.slider('Number of locations', 2, 50, 10)
+    with st.form("input_form"):
+        num_locs = st.slider('Number of locations', 2, 50, 20)
 
-    st.write('For genetics algorithm: ')
-    population_size = st.slider('Population size', num_locs, 300, 50)
-    generations = st.slider('Generations', 1, 100, 20)
-    mutation_rate = st.slider('Mutation Rate', 0.0, 1.0, 0.05)
+        st.write('For genetics algorithm: ')
+        population_size = st.slider('Population size', num_locs, 300, 150)
+        generations = st.slider('Generations', 1, 100, 50)
+        mutation_rate = st.slider('Mutation Rate', 0.0, 1.0, 0.05)
 
+        st.form_submit_button("Submit")
+        
     if 'table' not in st.session_state:
         st.session_state['table'] = table_name
 
@@ -31,9 +41,9 @@ with st.sidebar:
         try:
             if num_locs is not None:
                 table_name = f"random_{num_locs}_locs"
-                conn.query(f"call routes.get_n_random_locs({num_locs}, '{table_name}');")
-                conn.query(f"call routes.naive_path_finder('{table_name}')")
-                conn.query(f"call routes.genetics_path_finder('{table_name}', {population_size}, {generations}, {mutation_rate})")
+                session.call("routes.get_n_random_locs", num_locs, table_name)
+                session.call("routes.naive_path_finder", table_name)
+                session.call("routes.genetics_path_finder", table_name, population_size, generations, mutation_rate)
                 data_ready = True 
         finally:
             st.session_state.table = table_name
@@ -49,7 +59,7 @@ if data_ready:
 
 if st.session_state.clicked:
     table_name = st.session_state.table
-    df = conn.query(f"select * from routes.{table_name}_route")
+    df = load_data('random_20_locs')
 
     naive_solution = df[df['METHOD'] == 'naive']
     naive_path = ast.literal_eval(naive_solution['PATH'].iloc[0])
@@ -61,7 +71,6 @@ if st.session_state.clicked:
 
     naive_fig = get_naive_globe(naive_path)
     globe_fig = get_genetics_globe(genetics_path)
-    
     
     with col1:
         st.header('Naive (Nearest Neighbor) Solution') 

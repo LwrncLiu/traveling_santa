@@ -5,8 +5,7 @@ import re
 import math
 import streamlit as st
 
-
-# @st.cache_resource(hash_funcs={dict: lambda _: None})
+@st.cache_data
 def get_naive_globe(naive_path):
     globe = globe_fig()
     node, path = node_paths(naive_path)
@@ -25,7 +24,7 @@ def get_naive_globe(naive_path):
     )
     return globe
 
-# @st.cache_resource(hash_funcs={dict: lambda _: None})
+@st.cache_data
 def get_genetics_globe(genetics_path):
     globe = globe_fig()
     node, path = node_paths(genetics_path)
@@ -145,8 +144,8 @@ def node_paths(path):
             
         prev_x, prev_y, prev_z = curr_x, curr_y, curr_z
 
-    node_scatter = go.Scatter3d(x=x_scatter, y=y_scatter, z=z_scatter, mode='markers', marker=dict(color='#F51720', size=2), name='Nodes')
-    node_path = go.Scatter3d(x=x_arcs, y=y_arcs, z=z_arcs, mode='lines', marker=dict(color='#00FFFF'), name='Paths')
+    node_scatter = go.Scatter3d(x=x_scatter, y=y_scatter, z=z_scatter, mode='markers', marker=dict(color='#F51720', size=3), name='Nodes')
+    node_path = go.Scatter3d(x=x_arcs, y=y_arcs, z=z_arcs, mode='lines', marker=dict(color='#00FFFF', size=2), name='Paths')
 
     return node_scatter, node_path
 

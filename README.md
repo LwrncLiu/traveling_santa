@@ -1,9 +1,7 @@
 # traveling_santa
 
-WIP
+This repo implements the genetics algorithm in Snowflake using Snowpark Python and stored procedures to solve to Traveling Salesman Problem.
+
+TODOs:
 ---
-* Visualize globe with points and paths <- globe + points; still need to figure out paths
-* Algorithm(s) to generate points & paths 
-    * Genetic Algorithm
-    * A ML solution (a DFS strategy? It is a similar optimization problem)
-* Incorporate the modern data stack
+- Add comments to code
