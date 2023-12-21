@@ -12,3 +12,4 @@ grant all on database traveling_santa to role route_planner;
 grant all on all schemas in database traveling_santa to role route_planner;
 grant usage on warehouse compute_wh to role route_planner
 
+use role route_planner;
