@@ -9,6 +9,12 @@ $$
 import snowflake.snowpark.functions as F
 
 def main(session, source_table):
+    '''
+    Takes a given source table that contains a set of coordinates, then starting from
+    the north pole, traverse to the next nearest coordinate and repeat until all coordinates 
+    have been traversed, finally ending up at the north pole. Output path is returned in the
+    table f'{source_table}_route'.
+    '''
     METHOD = 'NAIVE'
     START_COL = 'START'
     END_COL = 'END'

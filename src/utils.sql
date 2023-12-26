@@ -9,6 +9,10 @@ $$
 import snowflake.snowpark.functions as F
 
 def main(session, num_locs, table_name):
+    '''
+    Queries the openaddress table from worldwide_address and returns `n` number
+    of coordinates and populates coordinates in a given table
+    '''
     all_addresses = session.table('worldwide_address_data.address.openaddress')
     num_addresses = all_addresses.filter((F.col('LON') != 0) & (F.col('LAT') != 0)) \
                         .sample(n=num_locs) \

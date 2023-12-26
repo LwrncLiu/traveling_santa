@@ -16,6 +16,10 @@ class Path:
         self.fitness_normalized = None
 
     def mutate(self, distances):
+        '''
+        Swap two non-north pole indicies if the distance between the indices
+        are less than the average node-node distance of the entire path
+        '''
         swap_indicies = random.sample(range(1, len(self.path) - 2), 2)
         idx_a, idx_b = swap_indicies[0], swap_indicies[1]
         if self.fitness is None:
@@ -24,6 +28,9 @@ class Path:
             self.path[idx_a], self.path[idx_b] = self.path[idx_b], self.path[idx_a]
 
     def calculate_path_fitness(self, distances):
+        '''
+        Calculates the total distance of the path
+        '''
         prev_node = None
         fitness = 0
         for curr_node in self.path:
@@ -33,6 +40,9 @@ class Path:
         self.fitness = fitness
 
     def calculate_path_subset_fitness(self, distances, start_idx, end_idx):
+        '''
+        Calculates the total distance of a subset of the path
+        '''
         prev_node = None
         fitness = 0
         for i in range(start_idx, end_idx):
@@ -73,11 +83,17 @@ class GeneticAlgorithm:
         return random_path
     
     def generate_population(self, root_path):
+        '''
+        Generates a population of paths of size self.population_size
+        '''
         for _ in range(self.population_size):
             rand_path = Path(self.generate_random_path(root_path))
             self.population.append(rand_path)
     
     def calculate_population_fitness(self):
+        '''
+        Calculate the 'fitness' value of each path in the population
+        '''
         for path in self.population:
             path.calculate_path_fitness(self.lookup_table)
             if self.best_path is None or path.fitness < self.best_path.fitness:
@@ -85,16 +101,29 @@ class GeneticAlgorithm:
                 self.best_path.fitness = path.fitness
     
     def normalize_fitness(self):
+        '''
+        Normalize the fitness value to the inverse of the travel distance. The
+        lower the travel distance, the higher the 'fitness'
+        '''
         total_fitness = sum([1 / path.fitness for path in self.population])
         for path in self.population:
             path.fitness_normalized = (1 / path.fitness) / total_fitness
 
     def select_from_population(self):
+        '''
+        Select paths from population with probabilities of each path selection relative
+        to the normalized fitness value
+        '''
         probabilities = [path.fitness_normalized for path in self.population]
         new_population = random.choices(self.population, probabilities, k = len(self.population))
         return new_population
     
     def crossover(self, population):
+        '''
+        Crossover two paths by selecting a random slice, using the shorter splice distance as the
+        seed of the child, and filling in the remaining nodes of the child path with the latter
+        parent.
+        '''
         new_population = []
         for _ in range(self.population_size):
             path_a = random.choice(population)
@@ -126,6 +155,10 @@ class GeneticAlgorithm:
         return new_population    
             
     def simulate_generations(self):
+        '''
+        Simulate the population with crossover and mutation over 
+        self.generations number of generations
+        '''
         for i in range(self.generations):
             self.normalize_fitness()
             selected_population = self.select_from_population()

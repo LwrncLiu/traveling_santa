@@ -7,6 +7,9 @@ import streamlit as st
 
 @st.cache_data
 def get_naive_globe(naive_path):
+    '''
+    Creates a globe with the path of the naive algorithm results
+    '''
     globe = globe_fig()
     node, path = node_paths(naive_path)
     globe.add_traces([node, path])
@@ -26,6 +29,9 @@ def get_naive_globe(naive_path):
 
 @st.cache_data
 def get_genetic_globe(genetic_path):
+    '''
+    Creates a globe with the path of the genetic algorithm results
+    '''
     globe = globe_fig()
     node, path = node_paths(genetic_path)
     globe.add_traces([node, path])
@@ -43,6 +49,9 @@ def get_genetic_globe(genetic_path):
     return globe
 
 def sphere(size, texture): 
+    '''
+    x,y,z coordiates of a sphere
+    '''
     N_lat = int(texture.shape[0])
     N_lon = int(texture.shape[1])
     theta = np.linspace(0,2*np.pi,N_lat)
@@ -57,6 +66,9 @@ def sphere(size, texture):
     return x0,y0,z0
 
 def globe_fig():
+    '''
+    Creates a surface plot of a globe
+    '''
     colorscale =[
         [0.0, 'rgb(30, 59, 117)'],
         [0.1, 'rgb(46, 68, 21)'],
@@ -87,6 +99,10 @@ def globe_fig():
     return fig
 
 def arc_coords(point1, point2, radius, num_coords = 50):
+    '''
+    Calculate the coordinates to display an arc along a sphere between two nodes. This is calc3
+    territory and I ended up asking chatgpt how to do this...
+    '''
     # Normalize the input points to lie on the sphere's surface
     point1 = point1 / np.linalg.norm(point1)
     point2 = point2 / np.linalg.norm(point2)
@@ -107,6 +123,10 @@ def arc_coords(point1, point2, radius, num_coords = 50):
     return x_line.tolist(), y_line.tolist(), z_line.tolist()
 
 def long_lat_to_coords(long, lat, radius):
+    '''
+    Convert longitude and latitude coordinates into x, y, z coordinates along 
+    a sphere of a given radius
+    '''
     phi = (90-lat)*(math.pi/180)
     theta = (long+180)*(math.pi/180)
     x = (radius) * math.sin(phi)*math.cos(theta)
@@ -116,6 +136,10 @@ def long_lat_to_coords(long, lat, radius):
     return x, y, z
 
 def parse_point(point):
+    '''
+    Parse the 'POINT(0 90)' string format from the geography snowflake datatype 
+    to long, lat values
+    '''
     pattern = r'POINT\(([-\d.]+) ([-\d.]+)\)'
     match = re.match(pattern, point)
 
@@ -124,6 +148,10 @@ def parse_point(point):
     return long, lat
 
 def node_paths(path):
+    '''
+    Returns the x,y,z scatter coordinates of all the destinations of a given path as well as the 
+    arcs between each destination in the path
+    '''
     x_scatter, y_scatter, z_scatter = [], [], []
     x_arcs, y_arcs, z_arcs = [], [], []
     prev_x, prev_y, prev_z = None, None, None
